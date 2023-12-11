@@ -4,10 +4,10 @@ Modified from Wang et al. (2018): 10.1109/TSP.2018.2818077
 @author: Joel Yeo, joelyeo@u.nus.edu
 """
 import numpy as np
-from . import tomo
 import torch
-from . import utils
 from tqdm import tqdm
+
+from . import tomo, utils
 
 # helper functions
 fft2 = lambda array: torch.fft.fftshift(torch.fft.fft2(torch.fft.ifftshift(array)))
@@ -44,10 +44,16 @@ class RAF:
             Structured as (no. measurements).
         wavelength : float
             Wavelength of electron beam in [Å]
-        pixelsize : float
-            Pixel size of detector in [Å]
+        pixelsize : float, optional
+            Pixel size of detector in [Å]. Default: 1.
+        device : str, optional
+            Device to run RAF on. Default: 'cpu'.
+        alpha : float, optional
+            Amplitude contrast ratio. Default: 0.1.
         dose : float
-            Dose per pixel area.
+            Dose per pixel area. Default: 1.
+        cs : float, optional
+            Spherical aberration parameter in [mm]. Default: 2.
         """
         self.amplitudes = torch.sqrt(intensities)
         self.quats = quats
@@ -102,9 +108,10 @@ class RAF:
 
         Parameters
         ----------
-        vol : 3D ndarray, optional
-            User-specified initial 3D exitwave volume estimate. The default
-            is None.
+        vol : 3D tensor, optional
+            The initial guess for the 3D surrogate volume.
+        groundtruth : 3D tensor, optional
+            The ground truth 3D particle for error metric calculation.
         """
         if vol is not None:
             # initialize with user provided volume
@@ -131,9 +138,9 @@ class RAF:
         Parameters
         ----------
         stepsize : float, optional
-            Gradient stepsize. Default is 1.
+            Gradient stepsize. Default: 1.
         niter : int, optional
-            Number of iterations. Default is 50.
+            Number of iterations. Default: 50.
         """
         self.stepsize = stepsize
         self.niter = niter
@@ -150,11 +157,13 @@ class RAF:
         Parameters
         ----------
         waves : 3D tensor
-            User-specified initial 3D exitwave volume estimate. The default
-            is None.
+            The exitwaves to be propagated, with shape (no. exitwaves, len_y, len_x).
         H : 3D tensor
             Associated transfer function for each exitwave. Must be same size
             as waves.
+        direction : str, optional
+            Set propagation direction to either 'forward' (exitplane to detector), or
+            'backward' (detector to exitplane). Default: 'backward'.
         """
         if direction == "forward":
             wavesf = fft2(waves * torch.sqrt(self.dose))
@@ -165,6 +174,20 @@ class RAF:
         return waves_out
 
     def reconstruct(self, projs, quats=None):
+        """
+        Reconstructs 3D surrogate volume from 2D exitwaves using Fourier slice theorem.
+
+        Parameters
+        ----------
+        projs : 3D tensor
+            The 2D projections, with shape (no. projections, len_y, len_x).
+        quats : 2D tensor, optional
+            Array of quaternions associated with the 2D projections. Structured as
+            (no. measurements, 4), where the columns are the quaternion components.
+            If None, uses default quaternions provided during initialization of
+            RAF class. Default: None.
+        """
+
         if quats is None:
             quats = self.quats
 
@@ -188,20 +211,23 @@ class RAF:
         return ifftn(fvol)
 
     def project(self, vol, quats=None):
+        """
+        Projections 2D exitwaves from 3D surrogate volume using Fourier slice theorem.
+
+        Parameters
+        ----------
+        vol : 3D tensor
+            Volume to extract 2D slices from.
+        quats : 2D tensor, optional
+            Array of quaternions associated with the 2D projections. Structured as
+            (no. measurements, 4), where the columns are the quaternion components.
+            If None, uses default quaternions provided during initialization of
+            RAF class. Default: None.
+        """
         if quats is None:
             quats = self.quats
 
-        # tomography functions only work on numpy arrays for now.
-        # vol_np = vol.cpu().numpy()
-        # quats_np = quats.cpu().numpy()
-
-        # projs = tomo.fourier_slices(vol_np, quats_np,
-        #                            is_fourier=False,
-        #                            return_fourier=False,
-        #                            return_real=False,
-        #                            mask=False)
-
-        # use new torch implementation
+        # use torch implementation
         projs = tomo.projection(vol, quats, batchsize=10, mask=False)
 
         if self.vignette_masks is None:
@@ -210,6 +236,21 @@ class RAF:
             return projs / self.vignette_masks
 
     def create_vignette_masks(self, size=None, quats=None):
+        """
+        If the 3D surrogate volume does not have finite support, i.e. background is
+        non-zero, the 2D projections will contain a vignetting effect. This function
+        creates a mask for each rotation to remove this unwanted vignetting.
+
+        Parameters
+        ----------
+        size : int, optional
+            Size of the 2D mask along an axis. Assumes square. Default: None.
+        quats : 2D tensor, optional
+            Array of quaternions associated with the 2D projections. Structured as
+            (no. measurements, 4), where the columns are the quaternion components.
+            If None, uses default quaternions provided during initialization of
+            RAF class. Default: None.
+        """
         print("Creating vignette masks.")
         if quats is None:
             quats = self.quats
@@ -224,9 +265,23 @@ class RAF:
         print("Vignette masks creation completed.")
 
     def raf_update(self, vol, eta=0.8):
-        # Reweighted amplitude flow algorithm, Wang (2018),
-        # DOI: 10.1109/TSP.2018.2818077
+        """
+        Performs RAF update for the current iteration.
 
+        Modified from Wang (2018), DOI: 10.1109/TSP.2018.2818077
+
+        Parameters
+        ----------
+        vol : 3D tensor
+            The current estimate for the 3D surrogate volume.
+        eta : float, optional
+            RAF hyperparameter. Default: 0.8.
+
+        Returns
+        -------
+        vol : 3D tensor
+            The updated estimate for the 3D surrogate volume.
+        """
         # potential projections
         projections = self.project(vol).to(self.device)
 
@@ -254,7 +309,24 @@ class RAF:
         return vol
 
     def pseudoinverse(self, eps=0.1):
-        # Eq.2.22
+        """
+        CTF-correction based 3D reconstruction algorithm called pseudoinverse.
+        An additional normalization has been included to normalize the volume based
+        on the median value of the background.
+
+        Modified from Kirkland (2010) Eq. 2.22, DOI: 10.1007/978-1-4419-6533-2
+
+        Parameters
+        ----------
+        eps : float, optional
+            Pseudoinverse threshold parameter. Default: 0.1.
+
+        Returns
+        -------
+        vol : 3D tensor
+            The reconstructed 3D volume.
+        """
+
         # create CTF first
         self.create_ctf()
 
@@ -288,7 +360,37 @@ class RAF:
         return vol
 
     def complex_potential(self, real_v):
+        """
+        Transforms the real-valued scattering potential to a complex-valued
+        scattering potential based on the amplitude contrast ratio, \alpha.
+
+        Parameters
+        ----------
+        real_v : ndarray
+            The real-valued scattering potential.
+
+        Returns
+        -------
+        complex_v : ndarray
+            The complex-valued scattering potential.
+        """
         return torch.sqrt(1 - self.alpha**2) * real_v + 1j * self.alpha * real_v
 
     def compute_mse(self, vol1, vol2):
+        """
+        Computes the mean squared error between two volumes
+
+        Parameters
+        ----------
+        vol1 : 3D tensor
+            First volume.
+        vol2 : 3D tensor
+            Second volume.
+
+        Returns
+        -------
+        mse : float
+            The MSE.
+
+        """
         return torch.linalg.norm(vol1 - vol2)

@@ -12,17 +12,19 @@ def rotate_3d(V, rotation_matrix, padding_mode='border'):
 
     Parameters
     ----------
-    V : 3D array
-        The volume to be rotated. Can be either real or complex.
-    rotation_matrix : 2D array
-        A 3x3 rotation matrix. Use emlab_quaternion_to_torch_affine_rotation_matrices
-        to obtain the correct rotation matrix associated with emlab's 
+    V : 3D or 4D tensor
+        The volume to be rotated. Can be either real or complex. If 4D, the shape is
+        (no. vols, len_z, len_y, len_x).
+    rotation_matrix : 2D or 3D tensor
+        The 3x3 rotation matrix. If 3D, the shape is (no. vols, 3, 3).
         quaternions.
+    padding_mode : str, optional
+        The padding mode for F.grid_sample.
 
     Returns
     -------
-    rotated_V : 3D array
-        The rotated volume.
+    rotated_V : 3D or 4D tensor
+        The rotated volume or volumes.
     '''
     #no_grad disables unnecessary gradient calculation since we just want
     #to use affine_grid for rotation
@@ -84,8 +86,7 @@ def create_kspace(n, pixelsize):
     Parameters
     ----------
     n : int
-        Number of pixels along x and y directions. Assumed same in both 
-        directions.
+        Number of pixels along x and y directions. Assumed same in both directions.
     pixelsize : float
         Pixel size in [A]. Assume same along both x and y directions.
 
@@ -102,19 +103,19 @@ def create_kspace(n, pixelsize):
 
 def circle2d(N, d):
     """
-    Generates 2D array for a filled-in circle.
+    Generates 2D tensor for a filled-in circle.
 
     Parameters
     ----------
     N : int
-        Length of grid in pixels
+        Length of grid in pixels.
     d : int
-        Diameter in pixels
+        Diameter in pixels.
 
     Returns
     -------
-    circle : ndarray, 2D
-        2D array with centered circle
+    circle : 2D tensor
+        2D tensor with centered circle
     ....
     """
     circle = torch.zeros((N, N))
