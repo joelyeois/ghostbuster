@@ -29,4 +29,4 @@ If you find our work useful in your research, please cite:
 ```
 
 ## License
-Our code is licensed under GPL-3.0. By downloading the software, you agree to the terms of this License.
+Our code is licensed under CC BY-NC-SA 4.0 DEED. By downloading the software, you agree to the terms of this License.
