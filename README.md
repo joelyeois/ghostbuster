@@ -8,6 +8,7 @@ This repository presents a minimal working example of the Ghostbuster algorithm 
 ## Installation
 To run the code, users may first install the required packages listed via ```pip -r requirements.txt```.
 After which, the `ghostbuster` package can be installed via ```python setup.py install```.
+The dataset for the demo notebooks may be downloaded [here](https://doi.org/10.5281/zenodo.10297508).
 
 ## Demos
 After installation, users may use the demo notebooks provided in the `notebooks` folder to run either RAF or DOFS individually, or the full Ghostbuster algorithm.
