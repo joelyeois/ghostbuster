@@ -1,5 +1,5 @@
 # Ghostbuster: a phase retrieval diffraction tomography algorithm for cryo-EM
-[Paper](*insert url*) | [Data](https://doi.org/10.5281/zenodo.10297508)
+[Paper](https://doi.org/10.1016/j.ultramic.2024.113962) | [Data](https://doi.org/10.5281/zenodo.10297508)
 
 [Joel Yeo](https://scholar.google.com/citations?user=2HW3Xs0AAAAJ&hl=en&inst=3212728378801010220&oi=sra), [Benedikt J. Daurer](https://scholar.google.com/citations?user=ukSgXPcAAAAJ&hl=en&inst=3212728378801010220&oi=ao), [Dari Kimanius](https://scholar.google.com/citations?user=noWvpR8AAAAJ&hl=en&inst=3212728378801010220&oi=ao), [Deepan Balakrishnan](https://scholar.google.com/citations?user=lRXoHK4AAAAJ&hl=en&inst=3212728378801010220&oi=ao), [Tristan Bepler](https://scholar.google.com/citations?user=Roxjki8AAAAJ&hl=en&inst=3212728378801010220&oi=ao), [Yong Zi Tan](https://scholar.google.com/citations?user=MO8j13QAAAAJ&hl=en&inst=3212728378801010220&oi=ao), [N. Duane Loh](https://scholar.google.com/citations?user=mLO7dRwAAAAJ&hl=en&inst=3212728378801010220&oi=ao)
 
