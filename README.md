@@ -16,16 +16,17 @@ After installation, users may use the demo notebooks provided in the `notebooks`
 ## Citation
 If you find our work useful in your research, please cite:
 ```
-@article{...,
-  author={...},
-  title={...},
-  journal={...},
-  year={...},
-  month={...},
-  day={...},
-  volume={...},
-  number={...},
-  pages={...}
+@article{YEO2024113962,
+title = {Ghostbuster: A phase retrieval diffraction tomography algorithm for cryo-EM},
+journal = {Ultramicroscopy},
+volume = {262},
+pages = {113962},
+year = {2024},
+issn = {0304-3991},
+doi = {https://doi.org/10.1016/j.ultramic.2024.113962},
+url = {https://www.sciencedirect.com/science/article/pii/S030439912400041X},
+author = {Joel Yeo and Benedikt J. Daurer and Dari Kimanius and Deepan Balakrishnan and Tristan Bepler and Yong Zi Tan and N. Duane Loh},
+keywords = {Diffraction tomography, Phase retrieval, Cryogenic electron microscopy, Single particle reconstruction, Ewald sphere curvature correction},
 }
 ```
 
